@@ -11,7 +11,8 @@ def make_model(n_dimensions, seed):
     """Create a model with the given parameters."""
     with spa.SPA(seed=seed) as model:
         # Create the state holding element
-        model.state = spa.State(dimensions=n_dimensions, feedback=1.0)
+        model.state = spa.State(dimensions=n_dimensions,
+                                feedback=1.0, feedback_synapse=0.01)
 
         # Create the state transitions
         actions = spa.Actions(*("dot(state, {}) --> state = {}".format(x, y) for
