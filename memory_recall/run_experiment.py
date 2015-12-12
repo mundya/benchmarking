@@ -117,6 +117,7 @@ def run_all_experiments(n_dimensions, spinnaker=False, n_symbols=4,
                                      n_symbols, time_per_symbol)
 
             # Combine the results with the already stored results
+            data["n_dimensions"].append(n_dims)
             for k, v in iteritems(results):
                 if k == "times":
                     if data["times"] is None:
