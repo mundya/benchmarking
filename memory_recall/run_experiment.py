@@ -81,7 +81,14 @@ def run_experiment(model, spinnaker, n_symbols, time_per_symbol):
 
     vocab = model.get_output_vocab("out")
     mem_out = np.array(sim.data[p_out])
-    results["output"] = vocab.dot(mem_out.T).T
+
+    # Get an ordered representation of the keys
+    m_vocab = np.zeros((n_symbols*2, vocab.dimensions))
+    for n in range(n_symbols):
+        m_vocab[n] = vocab["K{}".format(n)].v
+        m_vocab[n + n_symbols] = vocab["V{}".format(n)].v
+
+    results["output"] = np.dot(m_vocab, mem_out.T).T
     results["times"] = sim.trange()
 
     # Tidy up SpiNNaker and get the count of dropped packets
