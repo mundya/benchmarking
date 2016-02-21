@@ -76,10 +76,12 @@ def run_experiment(model, spinnaker):
     return results
 
 
-def run_all_experiments(n_dimensions, spinnaker=False, runs_per_scale=30):
+def run_all_experiments(n_dimensions, spinnaker=False, runs_per_scale=30,
+                        runs_per_seed=1):
     """Run a large number of experiments."""
     # Initialise the results as empty lists
     data = {"n_dimensions": list(),
+            "seed": list(),
             "times": None,
             "output": list()}
     if spinnaker:
@@ -87,23 +89,25 @@ def run_all_experiments(n_dimensions, spinnaker=False, runs_per_scale=30):
 
     # Repeatedly build and run the experiments
     for n_dims in n_dimensions:
-        for i in range(runs_per_scale):
-            model = make_model(n_dims, i)
-            results = run_experiment(model, spinnaker)
+        for seed in range(runs_per_scale):
+            for _ in range(runs_per_seed):
+                model = make_model(n_dims, seed)
+                results = run_experiment(model, spinnaker)
 
-            # Combine the results with the already stored results
-            data["n_dimensions"].append(n_dims)
-            for k, v in iteritems(results):
-                if k == "times":
-                    if data["times"] is None:
-                        data["times"] = v
-                else:
-                    data[k].append(v)
+                # Combine the results with the already stored results
+                data["n_dimensions"].append(n_dims)
+                data["seed"].append(seed)
+                for k, v in iteritems(results):
+                    if k == "times":
+                        if data["times"] is None:
+                            data["times"] = v
+                    else:
+                        data[k].append(v)
 
     # Store all the data in Numpy arrays and write to file
     final_data = dict()
-    final_data["n_dimensions"] = np.array(data.pop("n_dimensions"),
-                                          dtype=np.int)
+    for k in ("n_dimensions", "seed"):
+        final_data[k] = np.array(data.pop(k), dtype=np.int)
 
     for k, v in iteritems(data):
         final_data[k] = np.array(v)
@@ -120,10 +124,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("n_dimensions", nargs="+", type=int)
     parser.add_argument("--runs", type=int, default=30)
-    parser.add_argument("--spinnaker", action="store_true")
+    parser.add_argument("--runs-per-seed", type=int, default=1)
+    parser.add_argument("-s, --spinnaker", action="store_true")
     args = parser.parse_args()
 
     # Run the experiment
     run_all_experiments(args.n_dimensions,
                         args.spinnaker,
-                        args.runs)
+                        args.runs,
+                        args.runs_per_seed)
