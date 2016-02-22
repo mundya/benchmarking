@@ -1,4 +1,5 @@
 import argparse
+import logging
 import nengo
 from nengo import spa
 import nengo_spinnaker
@@ -58,9 +59,10 @@ def run_experiment(model, spinnaker):
     vocab = model.get_output_vocab("c")
     AB = vocab.parse("A * B").v
 
-    # Prepare the results for later analysis
+    # Prepare the results for later analysis, recording the magnitude of the
+    # error vector
     results = dict()
-    results["output"] = np.dot(AB, sim.data[p_c].T).T
+    results["output"] = np.sqrt(np.sum(np.square(AB - sim.data[p_c]), axis=1))
     results["times"] = sim.trange()
 
     # Tidy up SpiNNaker and get the count of dropped packets
@@ -77,7 +79,7 @@ def run_experiment(model, spinnaker):
 
 
 def run_all_experiments(n_dimensions, spinnaker=False, runs_per_scale=30,
-                        runs_per_seed=1):
+                        runs_per_seed=1, filename=None):
     """Run a large number of experiments."""
     # Initialise the results as empty lists
     data = {"n_dimensions": list(),
@@ -112,11 +114,16 @@ def run_all_experiments(n_dimensions, spinnaker=False, runs_per_scale=30,
     for k, v in iteritems(data):
         final_data[k] = np.array(v)
 
-    np.savez_compressed(
-        "convolution_{}_{}.npz".format("nengo" if not spinnaker else "spinnaker",
-                                       int(time.time())),
-        **final_data
-    )
+    if filename is None:
+        filename = "cconv_{}_{}_{}_{}_{}.npz".format(
+            "nengo" if not spinnaker else "spinnaker",
+            ",".join(map(str, n_dimensions)),
+            runs_per_scale,
+            runs_per_seed,
+            int(time.time())
+        )
+
+    np.savez_compressed(filename, **final_data)
 
 
 if __name__ == "__main__":
@@ -125,11 +132,19 @@ if __name__ == "__main__":
     parser.add_argument("n_dimensions", nargs="+", type=int)
     parser.add_argument("--runs", type=int, default=30)
     parser.add_argument("--runs-per-seed", type=int, default=1)
-    parser.add_argument("-s, --spinnaker", action="store_true")
+    parser.add_argument("-s", "--spinnaker", action="store_true")
+    parser.add_argument("filename", type=str, default=None, nargs='?')
+    parser.add_argument("-v", "--verbosity", action="count")
     args = parser.parse_args()
+
+    if args.verbosity == 1:
+        logging.basicConfig(level=logging.INFO)
+    if args.verbosity >= 2:
+        logging.basicConfig(level=logging.DEBUG)
 
     # Run the experiment
     run_all_experiments(args.n_dimensions,
                         args.spinnaker,
                         args.runs,
-                        args.runs_per_seed)
+                        args.runs_per_seed,
+                        args.filename)
