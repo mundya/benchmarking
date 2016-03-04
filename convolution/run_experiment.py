@@ -8,6 +8,16 @@ from six import iteritems
 import time
 
 
+
+def label_net(network, prefixes=tuple()):
+    for net in network.networks:
+        label_net(net, prefixes + (net.label, ))
+
+    prefix = ".".join(p or "?" for p in prefixes)
+    for node in network.nodes:
+        node.label = "{}.{}".format(prefix, node.label)
+
+
 def make_model(n_dimensions, seed):
     """Create a model with the given parameters."""
     with spa.SPA(seed=seed) as model:
@@ -24,6 +34,7 @@ def make_model(n_dimensions, seed):
         # Add some input
         model.input = spa.Input(a='A', b='B')
 
+    label_net(model)
     return model
 
 
