@@ -1,4 +1,5 @@
 import argparse
+import logging
 import nengo
 from nengo import spa
 import nengo_spinnaker
@@ -65,7 +66,7 @@ def run_experiment(model, spinnaker, n_symbols, time_per_symbol):
             if n.output is not None:
                 model.config[n].function_of_time = True
 
-        sim = nengo_spinnaker.Simulator(model)
+        sim = nengo_spinnaker.Simulator(model, use_spalloc=True)
 
         # Get the current number of dropped packets
         dropped = sum(
@@ -155,7 +156,14 @@ if __name__ == "__main__":
     parser.add_argument("--time_per_symbol", type=float, default=0.2)
     parser.add_argument("--runs", type=int, default=30)
     parser.add_argument("--spinnaker", action="store_true")
+    parser.add_argument("-v", "--verbosity", action="count")
     args = parser.parse_args()
+
+    if args.verbosity is not None:
+        if args.verbosity == 1:
+            logging.basicConfig(level=logging.INFO)
+        if args.verbosity >= 2:
+            logging.basicConfig(level=logging.DEBUG)
 
     # Run the experiment
     run_all_experiments(args.n_dimensions,
