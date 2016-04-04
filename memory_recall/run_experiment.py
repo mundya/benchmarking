@@ -94,13 +94,13 @@ def run_experiment(model, spinnaker, n_symbols, time_per_symbol):
 
     # Tidy up SpiNNaker and get the count of dropped packets
     if spinnaker:
-        sim.close()
-
         # Count the number of packets dropped during the simulation
         results["dropped_multicast"] = sum(
             sim.controller.get_router_diagnostics(x, y).dropped_multicast
             for (x, y) in sim.controller.get_machine()
         ) - dropped
+
+        sim.close()
 
     return results
 
