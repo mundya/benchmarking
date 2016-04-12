@@ -55,7 +55,7 @@ def run_experiment(model, spinnaker):
             if n.output is not None:
                 model.config[n].function_of_time = True
 
-        sim = nengo_spinnaker.Simulator(model)
+        sim = nengo_spinnaker.Simulator(model, use_spalloc=True)
 
         # Get the current number of dropped packets
         dropped = sum(
@@ -78,13 +78,13 @@ def run_experiment(model, spinnaker):
 
     # Tidy up SpiNNaker and get the count of dropped packets
     if spinnaker:
-        sim.close()
-
         # Count the number of packets dropped during the simulation
         results["dropped_multicast"] = sum(
             sim.controller.get_router_diagnostics(x, y).dropped_multicast
             for (x, y) in sim.controller.get_machine()
         ) - dropped
+
+        sim.close()
 
     return results
 

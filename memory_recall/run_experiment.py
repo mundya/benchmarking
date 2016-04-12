@@ -8,6 +8,15 @@ from six import iteritems
 import time
 
 
+def label_net(network, prefixes=tuple()):
+    for net in network.networks:
+        label_net(net, prefixes + (net.label, ))
+
+    prefix = ".".join(p or "?" for p in prefixes)
+    for node in network.nodes:
+        node.label = "{}.{}".format(prefix, node.label)
+
+
 def make_model(n_dimensions, n_symbols, time_per_symbol, seed):
     """Create a model with the given parameters."""
     with spa.SPA(seed=seed) as model:
@@ -46,6 +55,7 @@ def make_model(n_dimensions, n_symbols, time_per_symbol, seed):
             cue=make_input("K", delay=time_per_symbol * n_symbols)
         )
 
+    label_net(model)
     return model
 
 
@@ -100,13 +110,16 @@ def run_experiment(model, spinnaker, n_symbols, time_per_symbol):
             for (x, y) in sim.controller.get_machine()
         ) - dropped
 
+        print("> Dropped %d" % results["dropped_multicast"])
+
         sim.close()
 
     return results
 
 
 def run_all_experiments(n_dimensions, spinnaker=False, n_symbols=4,
-                        time_per_symbol=0.2, runs_per_scale=30):
+                        time_per_symbol=0.2, runs_per_scale=30,
+                        filename=None):
     """Run a large number of experiments."""
     # Initialise the results as empty lists
     data = {"n_dimensions": list(),
@@ -141,11 +154,16 @@ def run_all_experiments(n_dimensions, spinnaker=False, n_symbols=4,
     for k, v in iteritems(data):
         final_data[k] = np.array(v)
 
-    np.savez_compressed(
-        "recall_{}_{}.npz".format("nengo" if not spinnaker else "spinnaker",
-                                  int(time.time())),
-        **final_data
-    )
+    if filename is None:
+        filename = "parse_{}_{}_{}_{}_{}.npz".format(
+            "nengo" if not spinnaker else "spinnaker",
+            ",".join(map(str, n_dimensions)),
+            runs_per_scale,
+            runs_per_seed,
+            int(time.time())
+        )
+
+    np.savez_compressed(filename, **final_data)
 
 
 if __name__ == "__main__":
