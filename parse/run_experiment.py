@@ -23,8 +23,10 @@ def make_model(n_dims, seed):
         model.vision = spa.State(dimensions=n_dims)
         model.phrase = spa.State(dimensions=n_dims)
         model.motor = spa.State(dimensions=n_dims)
-        model.noun = spa.State(dimensions=n_dims, feedback=1.0)
-        model.verb = spa.State(dimensions=n_dims, feedback=1.0)
+        model.noun = spa.State(dimensions=n_dims, feedback=1.0,
+                               feedback_synapse=0.01)
+        model.verb = spa.State(dimensions=n_dims, feedback=1.0,
+                               feedback_synapse=0.01)
 
         model.bg = spa.BasalGanglia(spa.Actions(
             'dot(vision, WRITE) --> verb=vision',
@@ -109,6 +111,8 @@ def run_experiment(model, spinnaker):
             sim.controller.get_router_diagnostics(x, y).dropped_multicast
             for (x, y) in sim.controller.get_machine()
         ) - dropped
+
+        print("> Dropped %d" % results["dropped_multicast"])
 
         sim.close()
 
