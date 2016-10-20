@@ -38,7 +38,7 @@ def make_model(n_dimensions, seed):
     return model
 
 
-def run_experiment(model, spinnaker):
+def run_experiment(model, spinnaker, use_spalloc):
     """Run the experiment and return the results in a dictionary."""
     # Add probes for the output of the network
     with model:
@@ -55,7 +55,7 @@ def run_experiment(model, spinnaker):
             if n.output is not None:
                 model.config[n].function_of_time = True
 
-        sim = nengo_spinnaker.Simulator(model, use_spalloc=True)
+        sim = nengo_spinnaker.Simulator(model, use_spalloc=use_spalloc)
 
         # Get the current number of dropped packets
         dropped = sum(
@@ -64,7 +64,7 @@ def run_experiment(model, spinnaker):
         )
 
     # Run the simulation
-    sim.run(0.5)
+    sim.run(.5)
 
     # Get the vocabulary
     vocab = model.get_output_vocab("c")
@@ -73,7 +73,9 @@ def run_experiment(model, spinnaker):
     # Prepare the results for later analysis, recording the magnitude of the
     # error vector
     results = dict()
-    results["output"] = np.sqrt(np.sum(np.square(AB - sim.data[p_c]), axis=1))
+    # results["output"] = np.sqrt(np.sum(np.square(AB - sim.data[p_c]), axis=1))
+    results["output"] = np.sum(AB * sim.data[p_c], axis=1)
+    results["magnitude"] = np.sqrt(np.sum(np.square(sim.data[p_c]), axis=1))
     results["times"] = sim.trange()
 
     # Tidy up SpiNNaker and get the count of dropped packets
@@ -83,6 +85,7 @@ def run_experiment(model, spinnaker):
             sim.controller.get_router_diagnostics(x, y).dropped_multicast
             for (x, y) in sim.controller.get_machine()
         ) - dropped
+        print("> Dropped {} packets".format(results["dropped_multicast"]))
 
         sim.close()
 
@@ -90,13 +93,14 @@ def run_experiment(model, spinnaker):
 
 
 def run_all_experiments(n_dimensions, spinnaker=False, runs_per_scale=30,
-                        runs_per_seed=1, filename=None):
+                        runs_per_seed=1, filename=None, use_spalloc=False):
     """Run a large number of experiments."""
     # Initialise the results as empty lists
     data = {"n_dimensions": list(),
             "seed": list(),
             "times": None,
-            "output": list()}
+            "output": list(),
+            "magnitude": list()}
     if spinnaker:
         data["dropped_multicast"] = list()
 
@@ -105,7 +109,7 @@ def run_all_experiments(n_dimensions, spinnaker=False, runs_per_scale=30,
         for seed in range(runs_per_scale):
             for _ in range(runs_per_seed):
                 model = make_model(n_dims, seed)
-                results = run_experiment(model, spinnaker)
+                results = run_experiment(model, spinnaker, use_spalloc)
 
                 # Combine the results with the already stored results
                 data["n_dimensions"].append(n_dims)
@@ -144,13 +148,14 @@ if __name__ == "__main__":
     parser.add_argument("--runs", type=int, default=30)
     parser.add_argument("--runs-per-seed", type=int, default=1)
     parser.add_argument("-s", "--spinnaker", action="store_true")
+    parser.add_argument("--spalloc", action="store_true")
     parser.add_argument("filename", type=str, default=None, nargs='?')
-    parser.add_argument("-v", "--verbosity", action="count")
+    parser.add_argument("-v", "--verbosity", action="count", default=0)
     args = parser.parse_args()
 
     if args.verbosity == 1:
         logging.basicConfig(level=logging.INFO)
-    if args.verbosity >= 2:
+    elif args.verbosity >= 2:
         logging.basicConfig(level=logging.DEBUG)
 
     # Run the experiment
@@ -158,4 +163,5 @@ if __name__ == "__main__":
                         args.spinnaker,
                         args.runs,
                         args.runs_per_seed,
-                        args.filename)
+                        args.filename,
+                        use_spalloc=args.spalloc)

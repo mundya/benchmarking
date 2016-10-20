@@ -1,4 +1,5 @@
 import argparse
+import logging
 import nengo
 from nengo import spa
 import nengo_spinnaker
@@ -53,7 +54,7 @@ def run_experiment(model, spinnaker):
         )
 
     # Run the simulation
-    sim.run(0.5)
+    sim.run(1.0)
 
     # Prepare the results for later analysis
     results = dict()
@@ -120,7 +121,13 @@ if __name__ == "__main__":
     parser.add_argument("n_dimensions", nargs="+", type=int)
     parser.add_argument("--runs", type=int, default=30)
     parser.add_argument("--spinnaker", action="store_true")
+    parser.add_argument("-v", "--verbosity", action="count", default=0)
     args = parser.parse_args()
+
+    if args.verbosity == 1:
+        logging.basicConfig(level=logging.INFO)
+    elif args.verbosity >= 2:
+        logging.basicConfig(level=logging.DEBUG)
 
     # Run the experiment
     run_all_experiments(args.n_dimensions,
