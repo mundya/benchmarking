@@ -72,8 +72,18 @@ def run_experiment(model, spinnaker):
         for n in model.all_nodes:
             if n.output is not None:
                 model.config[n].function_of_time = True
+            elif ".dot" in n.label:
+                model.config[n].optimize_out = False
+            elif n.label[:2] == "bg":
+                model.config[n].optimize_out = True
+            elif "thal" in n.label:
+                model.config[n].optimize_out = True
+            elif "noun.state.output" in n.label:
+                model.config[n].optimize_out = False
+            elif "verb.state.output" in n.label:
+                model.config[n].optimize_out = False
 
-        sim = nengo_spinnaker.Simulator(model, use_spalloc=True)
+        sim = nengo_spinnaker.Simulator(model, use_spalloc=False)
 
         # Get the current number of dropped packets
         dropped = sum(

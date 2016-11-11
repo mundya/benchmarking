@@ -8,6 +8,15 @@ from six import iteritems
 import time
 
 
+def label_net(network, prefixes=tuple()):
+    for net in network.networks:
+        label_net(net, prefixes + (net.label, ))
+
+    prefix = ".".join(p or "?" for p in prefixes)
+    for node in network.nodes:
+        node.label = "{}.{}".format(prefix, node.label)
+
+
 def make_model(n_dimensions, seed):
     """Create a model with the given parameters."""
     with spa.SPA(seed=seed) as model:
@@ -23,6 +32,8 @@ def make_model(n_dimensions, seed):
 
         # Create the input for the initial state
         model.input = spa.Input(state=lambda t: 'A' if t < 0.05 else '0')
+
+    label_net(model)
 
     return model
 
@@ -44,6 +55,10 @@ def run_experiment(model, spinnaker):
         for n in model.all_nodes:
             if n.output is not None:
                 model.config[n].function_of_time = True
+            elif n.label[:2] == "bg" or "state.state." in n.label:
+                model.config[n].optimize_out = True
+            elif "thal.actions.output" in n.label:
+                model.config[n].optimize_out = False
 
         sim = nengo_spinnaker.Simulator(model)
 
@@ -71,6 +86,7 @@ def run_experiment(model, spinnaker):
             sim.controller.get_router_diagnostics(x, y).dropped_multicast
             for (x, y) in sim.controller.get_machine()
         ) - dropped
+        print("> Dropped {}".format(results["dropped_multicast"]))
 
     return results
 
